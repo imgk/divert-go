@@ -15,7 +15,7 @@ const (
 	//LayerEthernet       = Layer(C.WINDIVERT_LAYER_ETHERNET)
 )
 
-func LayerName(l Layer) string {
+func (l Layer) String() string {
 	switch l {
 	case LayerNetwork:
 		return "WINDIVERT_LAYER_NETWORK"
@@ -50,7 +50,7 @@ const (
 	//EventEthernetFrame   = Event(C.WINDIVERT_EVENT_ETHERNET_FRAME)
 )
 
-func EventName(e Event) string {
+func (e Event) String() string {
 	switch e {
 	case EventNetworkPacket:
 		return "WINDIVERT_EVENT_NETWORK_PACKET"
@@ -87,6 +87,19 @@ const (
 	ShutdownBoth = Shutdown(C.WINDIVERT_SHUTDOWN_BOTH)
 )
 
+func (s Shutdown) String() string {
+	switch s {
+	case ShutdownRecv:
+		return "WINDIVERT_SHUTDOWN_RECV"
+	case ShutdownSend:
+		return "WINDIVERT_SHUTDOWN_SEND"
+	case ShutdownBoth:
+		return "WINDIVERT_SHUTDOWN_BOTH"
+	default:
+		return ""
+	}
+}
+
 type Param int
 
 const (
@@ -96,6 +109,23 @@ const (
 	VersionMajor = Param(C.WINDIVERT_PARAM_VERSION_MAJOR)
 	VersionMinor = Param(C.WINDIVERT_PARAM_VERSION_MINOR)
 )
+
+func (p Param) String() string {
+	switch p {
+	case QueueLength:
+		return "WINDIVERT_PARAM_QUEUE_LENGTH"
+	case QueueTime:
+		return "WINDIVERT_PARAM_QUEUE_TIME"
+	case QueueSize:
+		return "WINDIVERT_PARAM_QUEUE_SIZE"
+	case VersionMajor:
+		return "WINDIVERT_PARAM_VERSION_MAJOR"
+	case VersionMinor:
+		return "WINDIVERT_PARAM_VERSION_MINOR"
+	default:
+		return ""
+	}
+}
 
 const (
 	FlagDefault   = uint64(0)
