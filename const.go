@@ -1,3 +1,5 @@
+// +build windows
+
 package divert
 
 // #cgo CFLAGS: -I${SRCDIR}/divert -Wno-incompatible-pointer-types

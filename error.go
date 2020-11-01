@@ -1,9 +1,11 @@
+// +build windows
+
 package divert
 
 import (
 	"errors"
 	"fmt"
-	
+
 	"golang.org/x/sys/windows"
 )
 
