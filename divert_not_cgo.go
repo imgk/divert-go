@@ -4,7 +4,6 @@ package divert
 
 import (
 	"fmt"
-	"log"
 	"runtime"
 	"strconv"
 	"strings"
@@ -21,9 +20,9 @@ var (
 
 var once = sync.Once{}
 
-func checkVersion() {
+func checkVersion() error {
 	if err := checkForWow64(); err != nil {
-		log.Panic(err)
+		return err
 	}
 
 	winDivert = windows.MustLoadDLL("WinDivert.dll")
@@ -36,11 +35,12 @@ func checkVersion() {
 	}
 	ver, err := GetVersion()
 	if err != nil {
-		log.Panic(err)
+		return err
 	}
 	if _, ok := vers[ver]; !ok {
-		log.Panic(fmt.Errorf("unsupported windivert version: %v", ver))
+		return fmt.Errorf("unsupported windivert version: %v", ver)
 	}
+	return nil
 }
 
 // Get version info of windivert
@@ -110,11 +110,16 @@ type Handle struct {
 	wOverlapped windows.Overlapped
 }
 
-func Open(filter string, layer Layer, priority int16, flags uint64) (*Handle, error) {
-	once.Do(checkVersion)
+func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, err error) {
+	once.Do(func() {
+		err = checkVersion()
+	})
+	if err != nil {
+		return
+	}
 
 	if priority < PriorityLowest || priority > PriorityHighest {
-		return nil, fmt.Errorf("Priority %v is not Correct, Max: %v, Min: %v", priority, PriorityHighest, PriorityLowest)
+		return nil, errPriority
 	}
 
 	filterPtr, err := windows.BytePtrFromString(filter)
