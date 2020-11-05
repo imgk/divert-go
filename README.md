@@ -3,7 +3,7 @@
 ## Feature
 
 + Support WinDivert 2.x
-+ Optional CGO suport to remove dependence of WinDivert.dll
++ Optional CGO support to remove dependence of WinDivert.dll
 
 To use cgo version, please add tags="divert_cgo".
 
