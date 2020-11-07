@@ -20,28 +20,7 @@ import (
 
 var once = sync.Once{}
 
-func checkVersion() error {
-	if err := checkForWow64(); err != nil {
-		return err
-	}
-
-	vers := map[string]struct{}{
-		"2.0": struct{}{},
-		"2.1": struct{}{},
-		"2.2": struct{}{},
-	}
-	ver, err := GetVersion()
-	if err != nil {
-		return err
-	}
-	if _, ok := vers[ver]; !ok {
-		return fmt.Errorf("unsupported windivert version: %v", ver)
-	}
-	return nil
-}
-
-// Get version info of windivert
-func GetVersion() (ver string, err error) {
+func GetVersionInfo() (ver string, err error) {
 	h, err := Open("false", LayerNetwork, PriorityDefault, FlagDefault)
 	if err != nil {
 		return
@@ -90,12 +69,54 @@ type Handle struct {
 
 func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, err error) {
 	once.Do(func() {
-		err = checkVersion()
+		if er := checkForWow64(); er != nil {
+			err = er
+			return
+		}
+
+		vers := map[string]struct{}{
+			"2.0": {},
+			"2.1": {},
+			"2.2": {},
+		}
+		ver, er := func() (ver string, err error) {
+			h, err := open("false", LayerNetwork, PriorityDefault, FlagDefault)
+			if err != nil {
+				return
+			}
+			defer func() {
+				err = h.Close()
+			}()
+
+			major, err := h.GetParam(VersionMajor)
+			if err != nil {
+				return
+			}
+
+			minor, err := h.GetParam(VersionMinor)
+			if err != nil {
+				return
+			}
+
+			ver = strings.Join([]string{strconv.Itoa(int(major)), strconv.Itoa(int(minor))}, ".")
+			return
+		}()
+		if er != nil {
+			err = er
+			return
+		}
+		if _, ok := vers[ver]; !ok {
+			err = fmt.Errorf("unsupported windivert version: %v", ver)
+		}
 	})
 	if err != nil {
 		return
 	}
 
+	return open(filter, layer, priority, flags)
+}
+
+func open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, err error) {
 	if priority < PriorityLowest || priority > PriorityHighest {
 		return nil, errPriority
 	}
@@ -125,11 +146,11 @@ func (h *Handle) Recv(buffer []byte, address *Address) (uint, error) {
 	return recvLen, nil
 }
 
-func (h *Handle) RecvEx(buffer []byte, address []Address, overlapped *windows.Overlapped) (uint, uint, error) {
+func (h *Handle) RecvEx(buffer []byte, address []Address) (uint, uint, error) {
 	recvLen := uint(0)
 
 	addrLen := uint(len(address)) * uint(unsafe.Sizeof(C.WINDIVERT_ADDRESS{}))
-	b := C.WinDivertRecvEx(C.HANDLE(h.Handle), unsafe.Pointer(&buffer[0]), C.uint(len(buffer)), (*C.uint)(unsafe.Pointer(&recvLen)), C.uint64_t(0), C.PWINDIVERT_ADDRESS(unsafe.Pointer(&address[0])), (*C.uint)(unsafe.Pointer(&addrLen)), C.LPOVERLAPPED(unsafe.Pointer(overlapped)))
+	b := C.WinDivertRecvEx(C.HANDLE(h.Handle), unsafe.Pointer(&buffer[0]), C.uint(len(buffer)), (*C.uint)(unsafe.Pointer(&recvLen)), C.uint64_t(0), C.PWINDIVERT_ADDRESS(unsafe.Pointer(&address[0])), (*C.uint)(unsafe.Pointer(&addrLen)), C.LPOVERLAPPED(unsafe.Pointer(nil)))
 	if b == C.FALSE {
 		return 0, 0, getLastError()
 	}
@@ -149,10 +170,10 @@ func (h *Handle) Send(buffer []byte, address *Address) (uint, error) {
 	return sendLen, nil
 }
 
-func (h *Handle) SendEx(buffer []byte, address []Address, overlapped *windows.Overlapped) (uint, error) {
+func (h *Handle) SendEx(buffer []byte, address []Address) (uint, error) {
 	sendLen := uint(0)
 
-	b := C.WinDivertSendEx(C.HANDLE(h.Handle), unsafe.Pointer(&buffer[0]), C.uint(len(buffer)), (*C.uint)(unsafe.Pointer(&sendLen)), C.uint64_t(0), (*C.WINDIVERT_ADDRESS)(unsafe.Pointer(&address[0])), C.uint(uint(len(address))*uint(unsafe.Sizeof(C.WINDIVERT_ADDRESS{}))), C.LPOVERLAPPED(unsafe.Pointer(overlapped)))
+	b := C.WinDivertSendEx(C.HANDLE(h.Handle), unsafe.Pointer(&buffer[0]), C.uint(len(buffer)), (*C.uint)(unsafe.Pointer(&sendLen)), C.uint64_t(0), (*C.WINDIVERT_ADDRESS)(unsafe.Pointer(&address[0])), C.uint(uint(len(address))*uint(unsafe.Sizeof(C.WINDIVERT_ADDRESS{}))), C.LPOVERLAPPED(unsafe.Pointer(nil)))
 	if b == C.FALSE {
 		return 0, getLastError()
 	}

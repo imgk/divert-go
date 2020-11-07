@@ -20,31 +20,7 @@ var (
 
 var once = sync.Once{}
 
-func checkVersion() error {
-	if err := checkForWow64(); err != nil {
-		return err
-	}
-
-	winDivert = windows.MustLoadDLL("WinDivert.dll")
-	winDivertOpen = winDivert.MustFindProc("WinDivertOpen")
-
-	vers := map[string]struct{}{
-		"2.0": struct{}{},
-		"2.1": struct{}{},
-		"2.2": struct{}{},
-	}
-	ver, err := GetVersion()
-	if err != nil {
-		return err
-	}
-	if _, ok := vers[ver]; !ok {
-		return fmt.Errorf("unsupported windivert version: %v", ver)
-	}
-	return nil
-}
-
-// Get version info of windivert
-func GetVersion() (ver string, err error) {
+func GetVersionInfo() (ver string, err error) {
 	h, err := Open("false", LayerNetwork, PriorityDefault, FlagDefault)
 	if err != nil {
 		return
@@ -79,8 +55,8 @@ func checkForWow64() error {
 	return nil
 }
 
-func IoControlEx(h windows.Handle, code CtlCode, ioctl unsafe.Pointer, buf *byte, bufLen uint32, overlapped *windows.Overlapped) (iolen uint32, err error) {
-	err = windows.DeviceIoControl(h, uint32(code), (*byte)(ioctl), uint32(unsafe.Sizeof(IoCtl{})), buf, bufLen, &iolen, overlapped)
+func ioControlEx(h windows.Handle, code ctlCode, ioctl unsafe.Pointer, buf *byte, bufLen uint32, overlapped *windows.Overlapped) (iolen uint32, err error) {
+	err = windows.DeviceIoControl(h, uint32(code), (*byte)(ioctl), uint32(unsafe.Sizeof(ioCtl{})), buf, bufLen, &iolen, overlapped)
 	if err != windows.ERROR_IO_PENDING {
 		return
 	}
@@ -90,14 +66,14 @@ func IoControlEx(h windows.Handle, code CtlCode, ioctl unsafe.Pointer, buf *byte
 	return
 }
 
-func IoControl(h windows.Handle, code CtlCode, ioctl unsafe.Pointer, buf *byte, bufLen uint32) (iolen uint32, err error) {
+func ioControl(h windows.Handle, code ctlCode, ioctl unsafe.Pointer, buf *byte, bufLen uint32) (iolen uint32, err error) {
 	event, _ := windows.CreateEvent(nil, 0, 0, nil)
 
 	overlapped := windows.Overlapped{
 		HEvent: event,
 	}
 
-	iolen, err = IoControlEx(h, code, ioctl, buf, bufLen, &overlapped)
+	iolen, err = ioControlEx(h, code, ioctl, buf, bufLen, &overlapped)
 
 	windows.CloseHandle(event)
 	return
@@ -112,12 +88,68 @@ type Handle struct {
 
 func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, err error) {
 	once.Do(func() {
-		err = checkVersion()
+		if er := checkForWow64(); er != nil {
+			err = er
+			return
+		}
+
+		dll, er := windows.LoadDLL("WinDivert.dll")
+		if er != nil {
+			err = er
+			return
+		}
+		winDivert = dll
+
+		proc, er := winDivert.FindProc("WinDivertOpen")
+		if er != nil {
+			err = er
+			return
+		}
+		winDivertOpen = proc
+
+		vers := map[string]struct{}{
+			"2.0": {},
+			"2.1": {},
+			"2.2": {},
+		}
+		ver, er :=  func() (ver string, err error) {
+			h, err := open("false", LayerNetwork, PriorityDefault, FlagDefault)
+			if err != nil {
+				return
+			}
+			defer func() {
+				err = h.Close()
+			}()
+
+			major, err := h.GetParam(VersionMajor)
+			if err != nil {
+				return
+			}
+
+			minor, err := h.GetParam(VersionMinor)
+			if err != nil {
+				return
+			}
+
+			ver = strings.Join([]string{strconv.Itoa(int(major)), strconv.Itoa(int(minor))}, ".")
+			return
+		}()
+		if er != nil {
+			err = er
+			return
+		}
+		if _, ok := vers[ver]; !ok {
+			err = fmt.Errorf("unsupported windivert version: %v", ver)
+		}
 	})
 	if err != nil {
 		return
 	}
 
+	return open(filter, layer, priority, flags)
+}
+
+func open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, err error) {
 	if priority < PriorityLowest || priority > PriorityHighest {
 		return nil, errPriority
 	}
@@ -157,7 +189,7 @@ func (h *Handle) Recv(buffer []byte, address *Address) (uint, error) {
 		AddrLenPtr: uint64(uintptr(unsafe.Pointer(&addrLen))),
 	}
 
-	iolen, err := IoControlEx(h.Handle, IoCtlRecv, unsafe.Pointer(&recv), &buffer[0], uint32(len(buffer)), &h.rOverlapped)
+	iolen, err := ioControlEx(h.Handle, ioCtlRecv, unsafe.Pointer(&recv), &buffer[0], uint32(len(buffer)), &h.rOverlapped)
 	if err != nil {
 		return uint(iolen), Error(err.(windows.Errno))
 	}
@@ -165,14 +197,14 @@ func (h *Handle) Recv(buffer []byte, address *Address) (uint, error) {
 	return uint(iolen), nil
 }
 
-func (h *Handle) RecvEx(buffer []byte, address []Address, overlapped *windows.Overlapped) (uint, uint, error) {
+func (h *Handle) RecvEx(buffer []byte, address []Address) (uint, uint, error) {
 	addrLen := uint(len(address)) * uint(unsafe.Sizeof(Address{}))
 	recv := recv{
 		Addr:       uint64(uintptr(unsafe.Pointer(&address[0]))),
 		AddrLenPtr: uint64(uintptr(unsafe.Pointer(&addrLen))),
 	}
 
-	iolen, err := IoControlEx(h.Handle, IoCtlRecv, unsafe.Pointer(&recv), &buffer[0], uint32(len(buffer)), &h.rOverlapped)
+	iolen, err := ioControlEx(h.Handle, ioCtlRecv, unsafe.Pointer(&recv), &buffer[0], uint32(len(buffer)), &h.rOverlapped)
 	if err != nil {
 		return uint(iolen), addrLen / uint(unsafe.Sizeof(Address{})), Error(err.(windows.Errno))
 	}
@@ -186,7 +218,7 @@ func (h *Handle) Send(buffer []byte, address *Address) (uint, error) {
 		AddrLen: uint64(unsafe.Sizeof(Address{})),
 	}
 
-	iolen, err := IoControlEx(h.Handle, IoCtlSend, unsafe.Pointer(&send), &buffer[0], uint32(len(buffer)), &h.wOverlapped)
+	iolen, err := ioControlEx(h.Handle, ioCtlSend, unsafe.Pointer(&send), &buffer[0], uint32(len(buffer)), &h.wOverlapped)
 	if err != nil {
 		return uint(iolen), Error(err.(windows.Errno))
 	}
@@ -194,13 +226,13 @@ func (h *Handle) Send(buffer []byte, address *Address) (uint, error) {
 	return uint(iolen), nil
 }
 
-func (h *Handle) SendEx(buffer []byte, address []Address, overlapped *windows.Overlapped) (uint, error) {
+func (h *Handle) SendEx(buffer []byte, address []Address) (uint, error) {
 	send := send{
 		Addr:    uint64(uintptr(unsafe.Pointer(&address[0]))),
 		AddrLen: uint64(unsafe.Sizeof(Address{})) * uint64(len(address)),
 	}
 
-	iolen, err := IoControlEx(h.Handle, IoCtlSend, unsafe.Pointer(&send), &buffer[0], uint32(len(buffer)), &h.wOverlapped)
+	iolen, err := ioControlEx(h.Handle, ioCtlSend, unsafe.Pointer(&send), &buffer[0], uint32(len(buffer)), &h.wOverlapped)
 	if err != nil {
 		return uint(iolen), Error(err.(windows.Errno))
 	}
@@ -213,7 +245,7 @@ func (h *Handle) Shutdown(how Shutdown) error {
 		How: uint32(how),
 	}
 
-	_, err := IoControl(h.Handle, IoCtlShutdown, unsafe.Pointer(&shutdown), nil, 0)
+	_, err := ioControl(h.Handle, ioCtlShutdown, unsafe.Pointer(&shutdown), nil, 0)
 	if err != nil {
 		return Error(err.(windows.Errno))
 	}
@@ -239,7 +271,7 @@ func (h *Handle) GetParam(p Param) (uint64, error) {
 		Value: 0,
 	}
 
-	_, err := IoControl(h.Handle, IoCtlGetParam, unsafe.Pointer(&getParam), (*byte)(unsafe.Pointer(&getParam.Value)), uint32(unsafe.Sizeof(getParam.Value)))
+	_, err := ioControl(h.Handle, ioCtlGetParam, unsafe.Pointer(&getParam), (*byte)(unsafe.Pointer(&getParam.Value)), uint32(unsafe.Sizeof(getParam.Value)))
 	if err != nil {
 		return getParam.Value, Error(err.(windows.Errno))
 	}
@@ -270,7 +302,7 @@ func (h *Handle) SetParam(p Param, v uint64) error {
 		Param: uint32(p),
 	}
 
-	_, err := IoControl(h.Handle, IoCtlSetParam, unsafe.Pointer(&setParam), nil, 0)
+	_, err := ioControl(h.Handle, ioCtlSetParam, unsafe.Pointer(&setParam), nil, 0)
 	if err != nil {
 		return Error(err.(windows.Errno))
 	}

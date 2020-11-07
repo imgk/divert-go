@@ -2,63 +2,58 @@
 
 package divert
 
-type CtlCode uint32
+type ctlCode uint32
 
 const (
-	METHOD_BUFFERED   = 0
-	METHOD_IN_DIRECT  = 1
-	METHOD_OUT_DIRECT = 2
-	METHOD_NEITHER    = 3
+	_METHOD_IN_DIRECT  = 1
+	_METHOD_OUT_DIRECT = 2
 )
 
 const (
-	FILE_READ_DATA  = 1
-	FILE_WRITE_DATA = 2
+	_FILE_READ_DATA  = 1
+	_FILE_WRITE_DATA = 2
 )
 
 const (
-	FILE_DEVICE_NETWORK             = 0x00000012
-	FILE_DEVICE_NETWORK_BROWSER     = 0x00000013
-	FILE_DEVICE_NETWORK_FILE_SYSTEM = 0x00000014
-	FILE_DEVICE_NETWORK_REDIRECTOR  = 0x00000028
+	_FILE_DEVICE_NETWORK = 0x00000012
 )
 
-func CTL_CODE(DeviceType, Function, Method, Access uint32) CtlCode {
-	return CtlCode(((DeviceType) << 16) | ((Access) << 14) | ((Function) << 2) | (Method))
+func _CTL_CODE(DeviceType, Function, Method, Access uint32) ctlCode {
+	return ctlCode(((DeviceType) << 16) | ((Access) << 14) | ((Function) << 2) | (Method))
 }
 
 var (
-	IoCtlInitialize = CTL_CODE(FILE_DEVICE_NETWORK, 0x921, METHOD_OUT_DIRECT, FILE_READ_DATA|FILE_WRITE_DATA)
-	IoCtlStartup    = CTL_CODE(FILE_DEVICE_NETWORK, 0x922, METHOD_IN_DIRECT, FILE_READ_DATA|FILE_WRITE_DATA)
-	IoCtlRecv       = CTL_CODE(FILE_DEVICE_NETWORK, 0x923, METHOD_OUT_DIRECT, FILE_READ_DATA)
-	IoCtlSend       = CTL_CODE(FILE_DEVICE_NETWORK, 0x924, METHOD_IN_DIRECT, FILE_READ_DATA|FILE_WRITE_DATA)
-	IoCtlSetParam   = CTL_CODE(FILE_DEVICE_NETWORK, 0x925, METHOD_IN_DIRECT, FILE_READ_DATA|FILE_WRITE_DATA)
-	IoCtlGetParam   = CTL_CODE(FILE_DEVICE_NETWORK, 0x926, METHOD_OUT_DIRECT, FILE_READ_DATA)
-	IoCtlShutdown   = CTL_CODE(FILE_DEVICE_NETWORK, 0x927, METHOD_IN_DIRECT, FILE_READ_DATA|FILE_WRITE_DATA)
+	ioCtlInitialize = _CTL_CODE(_FILE_DEVICE_NETWORK, 0x921, _METHOD_OUT_DIRECT, _FILE_READ_DATA|_FILE_WRITE_DATA)
+	ioCtlStartup    = _CTL_CODE(_FILE_DEVICE_NETWORK, 0x922, _METHOD_IN_DIRECT, _FILE_READ_DATA|_FILE_WRITE_DATA)
+	ioCtlRecv       = _CTL_CODE(_FILE_DEVICE_NETWORK, 0x923, _METHOD_OUT_DIRECT, _FILE_READ_DATA)
+	ioCtlSend       = _CTL_CODE(_FILE_DEVICE_NETWORK, 0x924, _METHOD_IN_DIRECT, _FILE_READ_DATA|_FILE_WRITE_DATA)
+	ioCtlSetParam   = _CTL_CODE(_FILE_DEVICE_NETWORK, 0x925, _METHOD_IN_DIRECT, _FILE_READ_DATA|_FILE_WRITE_DATA)
+	ioCtlGetParam   = _CTL_CODE(_FILE_DEVICE_NETWORK, 0x926, _METHOD_OUT_DIRECT, _FILE_READ_DATA)
+	ioCtlShutdown   = _CTL_CODE(_FILE_DEVICE_NETWORK, 0x927, _METHOD_IN_DIRECT, _FILE_READ_DATA|_FILE_WRITE_DATA)
 )
 
-func (c CtlCode) String() string {
+func (c ctlCode) String() string {
 	switch c {
-	case IoCtlInitialize:
+	case ioCtlInitialize:
 		return "IOCTL_WINDIVERT_INITIALIZE"
-	case IoCtlStartup:
+	case ioCtlStartup:
 		return "IOCTL_WINDIVERT_STARTUP"
-	case IoCtlRecv:
+	case ioCtlRecv:
 		return "IOCTL_WINDIVERT_RECV"
-	case IoCtlSend:
+	case ioCtlSend:
 		return "IOCTL_WINDIVERT_SEND"
-	case IoCtlSetParam:
+	case ioCtlSetParam:
 		return "IOCTL_WINDIVERT_SET_PARAM"
-	case IoCtlGetParam:
+	case ioCtlGetParam:
 		return "IOCTL_WINDIVERT_GET_PARAM"
-	case IoCtlShutdown:
+	case ioCtlShutdown:
 		return "IOCTL_WINDIVERT_SHUTDOWN"
 	default:
 		return ""
 	}
 }
 
-type IoCtl struct {
+type ioCtl struct {
 	b1, b2, b3, b4 uint32
 }
 
