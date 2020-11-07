@@ -112,7 +112,7 @@ func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, 
 			"2.1": {},
 			"2.2": {},
 		}
-		ver, er :=  func() (ver string, err error) {
+		ver, er := func() (ver string, err error) {
 			h, err := open("false", LayerNetwork, PriorityDefault, FlagDefault)
 			if err != nil {
 				return
