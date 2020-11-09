@@ -1,3 +1,5 @@
+// +build windows
+
 package divert
 
 type ctlCode uint32
