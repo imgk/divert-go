@@ -76,7 +76,7 @@ func open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, 
 	runtime.UnlockOSThread()
 
 	if hd == C.HANDLE(C.INVALID_HANDLE_VALUE) {
-		return nil, windows.Errno(C.GetLastError())
+		return nil, Error(C.GetLastError())
 	}
 
 	rEvent, _ := windows.CreateEvent(nil, 0, 0, nil)
