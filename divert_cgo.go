@@ -1,6 +1,11 @@
-// +build windows,!divert_cgo
+// +build windows,divert_cgo
 
 package divert
+
+// #cgo CFLAGS: -I${SRCDIR}/divert -Wno-incompatible-pointer-types
+// #define WINDIVERTEXPORT static
+// #include "windivert.c"
+import "C"
 
 import (
 	"fmt"
@@ -8,14 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"unsafe"
 
 	"golang.org/x/sys/windows"
-)
-
-var (
-	winDivert     = (*windows.DLL)(nil)
-	winDivertOpen = (*windows.Proc)(nil)
 )
 
 func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, err error) {
@@ -24,20 +23,6 @@ func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, 
 			err = er
 			return
 		}
-
-		dll, er := windows.LoadDLL("WinDivert.dll")
-		if er != nil {
-			err = er
-			return
-		}
-		winDivert = dll
-
-		proc, er := winDivert.FindProc("WinDivertOpen")
-		if er != nil {
-			err = er
-			return
-		}
-		winDivertOpen = proc
 
 		vers := map[string]struct{}{
 			"2.0": {},
@@ -86,17 +71,17 @@ func open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, 
 		return nil, errPriority
 	}
 
-	filterPtr, err := windows.BytePtrFromString(filter)
-	if err != nil {
-		return nil, err
-	}
-
 	runtime.LockOSThread()
-	hd, _, err := winDivertOpen.Call(uintptr(unsafe.Pointer(filterPtr)), uintptr(layer), uintptr(priority), uintptr(flags))
+	hd := C.WinDivertOpen(C.CString(filter), C.WINDIVERT_LAYER(layer), C.int16_t(priority), C.uint64_t(flags))
 	runtime.UnlockOSThread()
 
-	if windows.Handle(hd) == windows.InvalidHandle {
-		return nil, Error(err.(windows.Errno))
+	if hd == C.HANDLE(C.INVALID_HANDLE_VALUE) {
+		return nil, func() error {
+			if errno := windows.Errno(C.GetLastError()); errno != windows.ERROR_SUCCESS {
+				return Error(errno)
+			}
+			return nil
+		}()
 	}
 
 	rEvent, _ := windows.CreateEvent(nil, 0, 0, nil)
