@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/imgk/divert-go"
+	_ "github.com/imgk/divert-go/resource"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-// +build windows,!divert_cgo
+// +build windows,!divert_cgo,!divert_embedded
 
 package divert
 
