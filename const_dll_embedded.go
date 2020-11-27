@@ -67,7 +67,7 @@ const (
 const (
 	ChecksumDefault  = 0
 	NoIPChecksum     = 1
-	NoICMPChekcsum   = 2
+	NoICMPChecksum   = 2
 	NoICMPV6Checksum = 4
 	NoTCPChekcsum    = 8
 	NoUDPChecksum    = 16
