@@ -13,8 +13,8 @@ import (
 	"unsafe"
 
 	"golang.org/x/sys/windows"
-	"golang.zx2c4.com/wireguard/tun/wintun/memmod"
-	"golang.zx2c4.com/wireguard/tun/wintun/resource"
+
+	"github.com/imgk/divert-go/memmod"
 )
 
 var (
@@ -141,11 +141,11 @@ func (d *memDLL) Load() error {
 	}
 
 	const ourModule windows.Handle = 0
-	resInfo, err := resource.FindByName(ourModule, d.Name, resource.RT_RCDATA)
+	resInfo, err := windows.FindResource(ourModule, d.Name, windows.RT_RCDATA)
 	if err != nil {
 		return fmt.Errorf("Unable to find \"%v\" RCDATA resource: %w", d.Name, err)
 	}
-	data, err := resource.Load(ourModule, resInfo)
+	data, err := windows.LoadResourceData(ourModule, resInfo)
 	if err != nil {
 		return fmt.Errorf("Unable to load resource: %w", err)
 	}

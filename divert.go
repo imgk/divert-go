@@ -49,7 +49,7 @@ func checkForWow64() error {
 	return nil
 }
 
-func ioControlEx(h windows.Handle, code ctlCode, ioctl unsafe.Pointer, buf *byte, bufLen uint32, overlapped *windows.Overlapped) (iolen uint32, err error) {
+func ioControlEx(h windows.Handle, code CtlCode, ioctl unsafe.Pointer, buf *byte, bufLen uint32, overlapped *windows.Overlapped) (iolen uint32, err error) {
 	err = windows.DeviceIoControl(h, uint32(code), (*byte)(ioctl), uint32(unsafe.Sizeof(ioCtl{})), buf, bufLen, &iolen, overlapped)
 	if err != windows.ERROR_IO_PENDING {
 		return
@@ -60,7 +60,7 @@ func ioControlEx(h windows.Handle, code ctlCode, ioctl unsafe.Pointer, buf *byte
 	return
 }
 
-func ioControl(h windows.Handle, code ctlCode, ioctl unsafe.Pointer, buf *byte, bufLen uint32) (iolen uint32, err error) {
+func ioControl(h windows.Handle, code CtlCode, ioctl unsafe.Pointer, buf *byte, bufLen uint32) (iolen uint32, err error) {
 	event, _ := windows.CreateEvent(nil, 0, 0, nil)
 
 	overlapped := windows.Overlapped{
