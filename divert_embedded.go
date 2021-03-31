@@ -24,11 +24,6 @@ var (
 
 func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, err error) {
 	once.Do(func() {
-		if er := checkForWow64(); er != nil {
-			err = er
-			return
-		}
-
 		dll, er := loadDLL("WinDivert.dll")
 		if er != nil {
 			err = er

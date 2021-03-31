@@ -20,11 +20,6 @@ var (
 
 func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, err error) {
 	once.Do(func() {
-		if er := checkForWow64(); er != nil {
-			err = er
-			return
-		}
-
 		dll, er := windows.LoadDLL("WinDivert.dll")
 		if er != nil {
 			err = er
@@ -92,7 +87,8 @@ func open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, 
 	}
 
 	runtime.LockOSThread()
-	hd, _, err := winDivertOpen.Call(uintptr(unsafe.Pointer(filterPtr)), uintptr(layer), uintptr(priority), uintptr(flags))
+	// 386: Shadow panics on Windows 32-bit system, as `flags` is `uint64` while `uintptr` is `uint32` for 32-bit system.
+	hd, _, err := winDivertOpen.Call(uintptr(unsafe.Pointer(filterPtr)), uintptr(layer), uintptr(priority), uintptr(flags), 0)
 	runtime.UnlockOSThread()
 
 	if windows.Handle(hd) == windows.InvalidHandle {

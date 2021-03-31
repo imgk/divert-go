@@ -304,16 +304,6 @@ func (module *Module) performBaseRelocation(delta uintptr) (relocated bool, err 
 	return true, nil
 }
 
-func isBadPtr(p, l uintptr) bool {
-	if l == 0 {
-		return false
-	}
-	if p == 0 {
-		return true
-	}
-	return p + l - 1 >= p //TODO: maybe compare signed?
-}
-
 func (module *Module) buildImportTable() error {
 	directory := module.headerDirectory(IMAGE_DIRECTORY_ENTRY_IMPORT)
 	if directory.Size == 0 {

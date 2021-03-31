@@ -3,7 +3,6 @@
 package divert
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,18 +34,6 @@ func GetVersionInfo() (ver string, err error) {
 
 	ver = strings.Join([]string{strconv.Itoa(int(major)), strconv.Itoa(int(minor))}, ".")
 	return
-}
-
-func checkForWow64() error {
-	var b bool
-	err := windows.IsWow64Process(windows.CurrentProcess(), &b)
-	if err != nil {
-		return fmt.Errorf("Unable to determine whether the process is running under WOW64: %v", err)
-	}
-	if b {
-		return fmt.Errorf("You must use the 64-bit version of WireGuard on this computer.")
-	}
-	return nil
 }
 
 func ioControlEx(h windows.Handle, code CtlCode, ioctl unsafe.Pointer, buf *byte, bufLen uint32, overlapped *windows.Overlapped) (iolen uint32, err error) {
