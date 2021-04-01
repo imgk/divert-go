@@ -1,4 +1,5 @@
 // +build windows,divert_embedded
+// +build 386
 
 package divert
 
