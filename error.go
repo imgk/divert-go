@@ -17,7 +17,7 @@ var (
 	errPriority    = fmt.Errorf("Priority is not Correct, Max: %v, Min: %v", PriorityHighest, PriorityLowest)
 )
 
-var (
+const (
 	// The driver files WinDivert32.sys or WinDivert64.sys were not found
 	ErrFileNotFound = Error(windows.ERROR_FILE_NOT_FOUND)
 
