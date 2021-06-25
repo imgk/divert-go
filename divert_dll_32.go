@@ -1,5 +1,5 @@
 // +build windows,!divert_cgo,!divert_embedded
-// +build amd64
+// +build 386 arm
 
 package divert
 
@@ -88,7 +88,8 @@ func open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, 
 	}
 
 	runtime.LockOSThread()
-	hd, _, err := winDivertOpen.Call(uintptr(unsafe.Pointer(filterPtr)), uintptr(layer), uintptr(priority), uintptr(flags))
+	// 386: Shadow panics on Windows 32-bit system, as `flags` is `uint64` while `uintptr` is `uint32` for 32-bit system.
+	hd, _, err := winDivertOpen.Call(uintptr(unsafe.Pointer(filterPtr)), uintptr(layer), uintptr(priority), uintptr(flags), 0)
 	runtime.UnlockOSThread()
 
 	if windows.Handle(hd) == windows.InvalidHandle {
