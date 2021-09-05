@@ -1,5 +1,5 @@
 module github.com/imgk/divert-go
 
-go 1.16
+go 1.17
 
 require golang.org/x/sys v0.0.0-20210616094352-59db8d763f22
