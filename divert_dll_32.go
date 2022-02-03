@@ -1,4 +1,7 @@
-// +build windows,!divert_cgo,!divert_embedded
+//go:build windows && !divert_cgo && !divert_embedded && (386 || arm)
+// +build windows
+// +build !divert_cgo
+// +build !divert_embedded
 // +build 386 arm
 
 package divert
@@ -15,10 +18,12 @@ import (
 )
 
 var (
-	winDivert     = (*windows.DLL)(nil)
-	winDivertOpen = (*windows.Proc)(nil)
+	winDivert              = (*windows.DLL)(nil)
+	winDivertOpen          = (*windows.Proc)(nil)
+	winDivertCalcChecksums = (*windows.Proc)(nil)
 )
 
+// Open is ...
 func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, err error) {
 	once.Do(func() {
 		dll, er := windows.LoadDLL("WinDivert.dll")
@@ -109,4 +114,13 @@ func open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, 
 			HEvent: wEvent,
 		},
 	}, nil
+}
+
+// CalcChecksums is ...
+func CalcChecksums(buffer []byte, address *Address, flags uint64) bool {
+	re, _, err := winDivertCalcChecksums.Call(uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)), uintptr(unsafe.Pointer(address)), uintptr(flags), 0)
+	if err != nil {
+		return false
+	}
+	return re != 0
 }

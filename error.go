@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package divert
@@ -61,8 +62,10 @@ const (
 	ErrInvalidHandle = Error(windows.ERROR_INVALID_HANDLE)
 )
 
+// Error is ...
 type Error windows.Errno
 
+// Error is ...
 func (e Error) Error() string {
 	switch windows.Errno(e) {
 	case windows.ERROR_FILE_NOT_FOUND:

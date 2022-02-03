@@ -1,3 +1,4 @@
+//go:build windows && divert_cgo
 // +build windows,divert_cgo
 
 package divert
@@ -13,10 +14,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
+// Open is ...
 func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, err error) {
 	once.Do(func() {
 		vers := map[string]struct{}{
@@ -79,7 +82,7 @@ func open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, 
 
 	return &Handle{
 		Mutex:  sync.Mutex{},
-		Handle: windows.Handle(hd),
+		Handle: windows.Handle(uintptr(unsafe.Pointer(hd))),
 		rOverlapped: windows.Overlapped{
 			HEvent: rEvent,
 		},
@@ -87,4 +90,10 @@ func open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, 
 			HEvent: wEvent,
 		},
 	}, nil
+}
+
+// CalcChecksums is ...
+func CalcChecksums(buffer []byte, address *Address, flags uint64) bool {
+	re := C.WinDivertHelperCalcChecksums(unsafe.Pointer(&buffer[0]), C.UINT(len(buffer)), (*C.WINDIVERT_ADDRESS)(unsafe.Pointer(address)), C.uint64_t(flags))
+	return re == C.TRUE
 }

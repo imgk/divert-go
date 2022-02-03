@@ -1,3 +1,4 @@
+//go:build (windows && !divert_cgo) || (windows && divert_embedded)
 // +build windows,!divert_cgo windows,divert_embedded
 
 package divert

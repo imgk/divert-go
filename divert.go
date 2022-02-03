@@ -1,3 +1,4 @@
+//go:build windows
 // +build windows
 
 package divert
@@ -13,6 +14,7 @@ import (
 
 var once = sync.Once{}
 
+// GerVersionInfo is ...
 func GetVersionInfo() (ver string, err error) {
 	h, err := Open("false", LayerNetwork, PriorityDefault, FlagDefault)
 	if err != nil {
@@ -60,6 +62,7 @@ func ioControl(h windows.Handle, code CtlCode, ioctl unsafe.Pointer, buf *byte, 
 	return
 }
 
+// Handle is ...
 type Handle struct {
 	sync.Mutex
 	windows.Handle
@@ -67,6 +70,7 @@ type Handle struct {
 	wOverlapped windows.Overlapped
 }
 
+// Recv is ...
 func (h *Handle) Recv(buffer []byte, address *Address) (uint, error) {
 	addrLen := uint(unsafe.Sizeof(Address{}))
 	recv := recv{
@@ -82,6 +86,7 @@ func (h *Handle) Recv(buffer []byte, address *Address) (uint, error) {
 	return uint(iolen), nil
 }
 
+// RecvEx is ...
 func (h *Handle) RecvEx(buffer []byte, address []Address) (uint, uint, error) {
 	addrLen := uint(len(address)) * uint(unsafe.Sizeof(Address{}))
 	recv := recv{
@@ -97,6 +102,7 @@ func (h *Handle) RecvEx(buffer []byte, address []Address) (uint, uint, error) {
 	return uint(iolen), addrLen / uint(unsafe.Sizeof(Address{})), nil
 }
 
+// Send is ...
 func (h *Handle) Send(buffer []byte, address *Address) (uint, error) {
 	send := send{
 		Addr:    uint64(uintptr(unsafe.Pointer(address))),
@@ -111,6 +117,7 @@ func (h *Handle) Send(buffer []byte, address *Address) (uint, error) {
 	return uint(iolen), nil
 }
 
+// SendEx is ...
 func (h *Handle) SendEx(buffer []byte, address []Address) (uint, error) {
 	send := send{
 		Addr:    uint64(uintptr(unsafe.Pointer(&address[0]))),
@@ -125,6 +132,7 @@ func (h *Handle) SendEx(buffer []byte, address []Address) (uint, error) {
 	return uint(iolen), nil
 }
 
+// Shutdown is ...
 func (h *Handle) Shutdown(how Shutdown) error {
 	shutdown := shutdown{
 		How: uint32(how),
@@ -138,6 +146,7 @@ func (h *Handle) Shutdown(how Shutdown) error {
 	return nil
 }
 
+// Close is ...
 func (h *Handle) Close() error {
 	windows.CloseHandle(h.rOverlapped.HEvent)
 	windows.CloseHandle(h.wOverlapped.HEvent)
@@ -150,6 +159,7 @@ func (h *Handle) Close() error {
 	return nil
 }
 
+// GetParam is ...
 func (h *Handle) GetParam(p Param) (uint64, error) {
 	getParam := getParam{
 		Param: uint32(p),
@@ -164,6 +174,7 @@ func (h *Handle) GetParam(p Param) (uint64, error) {
 	return getParam.Value, nil
 }
 
+// SetParam is ...
 func (h *Handle) SetParam(p Param, v uint64) error {
 	switch p {
 	case QueueLength:

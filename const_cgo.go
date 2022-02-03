@@ -1,3 +1,4 @@
+//go:build windows && divert_cgo
 // +build windows,divert_cgo
 
 package divert
