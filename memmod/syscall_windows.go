@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT
  *
- * Copyright (C) 2017-2021 WireGuard LLC. All Rights Reserved.
+ * Copyright (C) 2017-2022 WireGuard LLC. All Rights Reserved.
  */
 
 package memmod
@@ -369,12 +369,6 @@ const (
 	IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_MASK        = 0xF0000000
 	IMAGE_GUARD_CF_FUNCTION_TABLE_SIZE_SHIFT       = 28
 )
-
-type IMAGE_RUNTIME_FUNCTION_ENTRY struct {
-	BeginAddress      uint32
-	EndAddress        uint32
-	UnwindInfoAddress uint32
-}
 
 const (
 	DLL_PROCESS_ATTACH = 1

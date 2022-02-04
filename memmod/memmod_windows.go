@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT
  *
- * Copyright (C) 2017-2021 WireGuard LLC. All Rights Reserved.
+ * Copyright (C) 2017-2022 WireGuard LLC. All Rights Reserved.
  */
 
 package memmod
@@ -39,11 +39,15 @@ type Module struct {
 	blockedMemory *addressList
 }
 
+func (module *Module) BaseAddr() uintptr {
+	return module.codeBase
+}
+
 func (module *Module) headerDirectory(idx int) *IMAGE_DATA_DIRECTORY {
 	return &module.headers.OptionalHeader.DataDirectory[idx]
 }
 
-func (module *Module) copySections(address uintptr, size uintptr, oldHeaders *IMAGE_NT_HEADERS) error {
+func (module *Module) copySections(address, size uintptr, oldHeaders *IMAGE_NT_HEADERS) error {
 	sections := module.headers.Sections()
 	for i := range sections {
 		if sections[i].SizeOfRawData == 0 {
@@ -135,7 +139,7 @@ func (module *Module) finalizeSection(sectionData *sectionFinalizeData) error {
 	}
 
 	// determine protection flags based on characteristics
-	var ProtectionFlags = [8]uint32{
+	ProtectionFlags := [8]uint32{
 		windows.PAGE_NOACCESS,          // not writeable, not readable, not executable
 		windows.PAGE_EXECUTE,           // not writeable, not readable, executable
 		windows.PAGE_READONLY,          // not writeable, readable, not executable
@@ -160,14 +164,13 @@ func (module *Module) finalizeSection(sectionData *sectionFinalizeData) error {
 	return nil
 }
 
-var rtlAddFunctionTable = windows.NewLazySystemDLL("ntdll.dll").NewProc("RtlAddFunctionTable")
-
 func (module *Module) registerExceptionHandlers() {
 	directory := module.headerDirectory(IMAGE_DIRECTORY_ENTRY_EXCEPTION)
 	if directory.Size == 0 || directory.VirtualAddress == 0 {
 		return
 	}
-	rtlAddFunctionTable.Call(module.codeBase+uintptr(directory.VirtualAddress), uintptr(directory.Size)/unsafe.Sizeof(IMAGE_RUNTIME_FUNCTION_ENTRY{}), module.codeBase)
+	runtimeFuncs := (*windows.RUNTIME_FUNCTION)(unsafe.Pointer(module.codeBase + uintptr(directory.VirtualAddress)))
+	windows.RtlAddFunctionTable(runtimeFuncs, uint32(uintptr(directory.Size)/unsafe.Sizeof(*runtimeFuncs)), module.codeBase)
 }
 
 func (module *Module) finalizeSections() error {
@@ -230,7 +233,7 @@ func (module *Module) executeTLS() {
 			if f == 0 {
 				break
 			}
-			syscall.Syscall(f, 3, module.codeBase, uintptr(DLL_PROCESS_ATTACH), uintptr(0))
+			syscall.SyscallN(f, module.codeBase, DLL_PROCESS_ATTACH, 0)
 			callback += unsafe.Sizeof(f)
 		}
 	}
@@ -384,10 +387,12 @@ type addressRange struct {
 	end   uintptr
 }
 
-var loadedAddressRanges []addressRange
-var loadedAddressRangesMu sync.RWMutex
-var haveHookedRtlPcToFileHeader sync.Once
-var hookRtlPcToFileHeaderResult error
+var (
+	loadedAddressRanges         []addressRange
+	loadedAddressRangesMu       sync.RWMutex
+	haveHookedRtlPcToFileHeader sync.Once
+	hookRtlPcToFileHeaderResult error
+)
 
 func hookRtlPcToFileHeader() error {
 	var kernelBase windows.Handle
@@ -439,7 +444,7 @@ func hookRtlPcToFileHeader() error {
 			}
 		}
 		loadedAddressRangesMu.RUnlock()
-		ret, _, _ := syscall.Syscall(originalRtlPcToFileHeader, 2, pcValue, uintptr(unsafe.Pointer(baseOfImage)), 0)
+		ret, _, _ := syscall.SyscallN(originalRtlPcToFileHeader, pcValue, uintptr(unsafe.Pointer(baseOfImage)))
 		return ret
 	})
 	err = windows.VirtualProtect(uintptr(unsafe.Pointer(thunk)), unsafe.Sizeof(*thunk), oldProtect, &oldProtect)
@@ -600,7 +605,7 @@ func LoadLibrary(data []byte) (module *Module, err error) {
 		module.entry = module.codeBase + uintptr(module.headers.OptionalHeader.AddressOfEntryPoint)
 		if module.isDLL {
 			// Notify library about attaching to process.
-			r0, _, _ := syscall.Syscall(module.entry, 3, module.codeBase, uintptr(DLL_PROCESS_ATTACH), 0)
+			r0, _, _ := syscall.SyscallN(module.entry, module.codeBase, DLL_PROCESS_ATTACH, 0)
 			successful := r0 != 0
 			if !successful {
 				err = windows.ERROR_DLL_INIT_FAILED
@@ -618,7 +623,7 @@ func LoadLibrary(data []byte) (module *Module, err error) {
 func (module *Module) Free() {
 	if module.initialized {
 		// Notify library about detaching from process.
-		syscall.Syscall(module.entry, 3, module.codeBase, uintptr(DLL_PROCESS_DETACH), 0)
+		syscall.SyscallN(module.entry, module.codeBase, DLL_PROCESS_DETACH, 0)
 		module.initialized = false
 	}
 	if module.modules != nil {
