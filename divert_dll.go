@@ -33,6 +33,13 @@ func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, 
 		}
 		winDivertOpen = proc
 
+		proc,er = winDivert.FindProc("WinDivertHelperCalcChecksums")
+		if er != nil {
+			err = er
+			return
+		}
+		winDivertCalcChecksums = proc
+
 		vers := map[string]struct{}{
 			"2.0": {},
 			"2.1": {},

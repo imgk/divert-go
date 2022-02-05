@@ -26,10 +26,25 @@ var (
 func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, err error) {
 	once.Do(func() {
 		dll := newLazyDLL("WinDivert.dll", nil)
+		if er := dll.Load(); er != nil {
+			err = er
+			return
+		}
 		winDivert = dll
 
 		proc := winDivert.NewProc("WinDivertOpen")
+		if er := proc.Find(); er != nil {
+			err = er
+			return
+		}
 		winDivertOpen = proc
+
+		proc = winDivert.NewProc("WinDivertHelperCalcChecksums")
+		if er := proc.Find(); er != nil {
+			err = er
+			return
+		}
+		winDivertCalcChecksums = proc
 
 		vers := map[string]struct{}{
 			"2.0": {},
