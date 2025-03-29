@@ -1,4 +1,4 @@
-//go:build windows && !divert_cgo && !divert_embedded
+//go:build windows && !divert_cgo && !divert_rsrc && !divert_embed && (amd64 || 386 || arm64)
 
 package divert
 
@@ -33,7 +33,7 @@ func Open(filter string, layer Layer, priority int16, flags uint64) (h *Handle, 
 		}
 		winDivertOpen = proc
 
-		proc,er = winDivert.FindProc("WinDivertHelperCalcChecksums")
+		proc, er = winDivert.FindProc("WinDivertHelperCalcChecksums")
 		if er != nil {
 			err = er
 			return

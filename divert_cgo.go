@@ -1,5 +1,4 @@
-//go:build windows && divert_cgo
-// +build windows,divert_cgo
+//go:build windows && divert_cgo && (amd64 || 386 || arm64)
 
 package divert
 

@@ -1,5 +1,4 @@
-//go:build windows
-// +build windows
+//go:build windows && (amd64 || 386 || arm64)
 
 package divert
 

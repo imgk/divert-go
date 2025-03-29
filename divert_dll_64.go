@@ -1,8 +1,4 @@
-//go:build windows && !divert_cgo && !divert_embedded && (amd64 || arm64)
-// +build windows
-// +build !divert_cgo
-// +build !divert_embedded
-// +build amd64 arm64
+//go:build windows && !divert_cgo && !divert_rsrc && !divert_embed && (amd64 || arm64)
 
 package divert
 

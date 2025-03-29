@@ -1,7 +1,4 @@
-//go:build windows && divert_embedded && (386 || arm)
-// +build windows
-// +build divert_embedded
-// +build 386 arm
+//go:build windows && (divert_rsrc || divert_embed) && 386
 
 package divert
 
