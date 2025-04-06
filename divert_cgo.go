@@ -2,7 +2,7 @@
 
 package divert
 
-// #cgo CFLAGS: -I${SRCDIR}/divert -Wno-incompatible-pointer-types -Wno-unused-value
+// #cgo CFLAGS: -I${SRCDIR}/divert -Wno-implicit-function-declaration -Wno-int-conversion -Wno-incompatible-pointer-types -Wno-unused-value
 // #define WINDIVERTEXPORT static
 // #include "windivert.c"
 import "C"
